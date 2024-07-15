@@ -1,0 +1,205 @@
+!
+version 15.1
+no service timestamps log datetime msec
+no service timestamps debug datetime msec
+no service password-encryption
+!
+hostname ROUTER_B1
+!
+!
+!
+!
+!
+ip dhcp pool NETWORK_B1_F0
+ network 172.22.245.128 255.255.255.192
+ default-router 172.22.245.129
+ dns-server 172.22.244.2
+ip dhcp pool NETWORK_B1_F1
+ network 172.22.245.192 255.255.255.192
+ default-router 172.22.245.193
+ dns-server 172.22.244.2
+ip dhcp pool NETWORK_B1_WIFI
+ network 172.22.244.128 255.255.255.128
+ default-router 172.22.244.129
+ dns-server 172.22.244.2
+ip dhcp pool NETWORK_B1_VOIP
+ network 172.22.245.0 255.255.255.128
+ default-router 172.22.245.1
+ option 150 ip 172.22.245.1
+ dns-server 172.22.244.2
+!
+!
+!
+ip cef
+no ipv6 cef
+!
+!
+!
+!
+license udi pid CISCO2811/K9 sn FTX1017TW5G-
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+!
+!
+!
+interface FastEthernet0/0
+ ip address 5.60.37.130 255.255.255.252
+ ip access-group 101 in
+ ip nat outside
+ duplex auto
+ speed auto
+!
+interface FastEthernet0/1
+ no ip address
+ duplex auto
+ speed auto
+!
+interface FastEthernet1/0
+ no ip address
+!
+interface FastEthernet1/0.1
+ encapsulation dot1Q 371
+ ip address 172.22.240.1 255.255.255.0
+ ip access-group 104 in
+ ip nat outside
+!
+interface FastEthernet1/0.2
+ encapsulation dot1Q 372
+ ip address 172.22.245.129 255.255.255.192
+ ip access-group 100 in
+!
+interface FastEthernet1/0.3
+ encapsulation dot1Q 373
+ ip address 172.22.245.193 255.255.255.192
+ ip access-group 100 in
+!
+interface FastEthernet1/0.4
+ encapsulation dot1Q 374
+ ip address 172.22.244.129 255.255.255.128
+ ip access-group 100 in
+!
+interface FastEthernet1/0.5
+ encapsulation dot1Q 375
+ ip address 172.22.244.1 255.255.255.128
+ ip access-group 102 in
+ ip nat inside
+!
+interface FastEthernet1/0.6
+ encapsulation dot1Q 376
+ ip address 172.22.245.1 255.255.255.128
+ ip access-group 100 in
+!
+interface Vlan1
+ no ip address
+!
+router ospf 1
+ log-adjacency-changes
+ network 172.22.240.0 0.0.0.255 area 0
+ network 172.22.244.0 0.0.0.127 area 1
+ network 172.22.244.128 0.0.0.127 area 1
+ network 172.22.245.0 0.0.0.127 area 1
+ network 172.22.245.128 0.0.0.63 area 1
+ network 172.22.245.192 0.0.0.63 area 1
+ default-information originate
+!
+router rip
+!
+ip nat inside source static tcp 172.22.244.2 80 172.22.240.1 80 
+ip nat inside source static tcp 172.22.244.2 443 172.22.240.1 443 
+ip classless
+ip route 0.0.0.0 0.0.0.0 5.60.37.129 
+!
+ip flow-export version 9
+!
+!
+access-list 100 permit ip 172.22.244.0 0.0.3.255 any
+access-list 100 permit ip 172.22.240.0 0.0.0.255 any
+access-list 100 permit icmp any any echo-reply
+access-list 100 permit icmp any any echo
+access-list 100 permit udp any eq bootpc any eq bootps
+access-list 100 permit udp any eq bootps any eq bootpc
+access-list 100 permit ospf any any
+access-list 101 deny ip 172.22.240.0 0.0.0.255 any
+access-list 101 deny ip 172.22.244.0 0.0.3.255 any
+access-list 101 permit icmp any any echo
+access-list 101 permit icmp any any echo-reply
+access-list 102 permit icmp any any echo
+access-list 102 permit icmp any any echo-reply
+access-list 102 permit tcp any host 172.22.244.3 eq www
+access-list 102 permit tcp any host 172.22.244.3 eq 443
+access-list 102 permit ospf any any
+access-list 102 permit ip 172.22.240.0 0.0.0.255 host 172.22.244.2
+access-list 102 permit ip host 172.22.240.2 host 172.22.244.3
+access-list 102 permit ip host 172.22.240.3 host 172.22.244.2
+access-list 102 permit udp host 172.22.240.1 host 172.22.244.2 eq domain
+access-list 102 permit udp any host 172.22.244.2 eq domain
+access-list 102 permit udp host 172.22.244.2 172.22.240.0 0.0.0.255 eq domain
+access-list 104 permit ip 172.22.244.0 0.0.3.255 any
+access-list 104 permit ip 172.22.240.0 0.0.0.255 any
+access-list 104 permit icmp any any echo-reply
+access-list 104 permit icmp any any echo
+access-list 104 permit udp 172.22.240.0 0.0.0.255 host 172.22.240.1 eq tftp
+access-list 104 permit udp 172.22.245.0 0.0.0.127 host 172.22.240.1 eq tftp
+access-list 104 permit ospf any any
+access-list 104 permit udp host 172.22.244.2 172.22.240.0 0.0.0.255 eq domain
+!
+!
+!
+!
+!
+dial-peer voice 20 voip
+ destination-pattern 2...
+ session target ipv4:172.22.240.2
+!
+dial-peer voice 30 voip
+ destination-pattern 3...
+ session target ipv4:172.22.240.3
+!
+telephony-service
+ max-ephones 2
+ max-dn 2
+ ip source-address 172.22.245.1 port 2000
+ auto assign 1 to 2
+!
+ephone-dn 1
+ number 1000
+!
+ephone-dn 2
+ number 1001
+!
+ephone 1
+ device-security-mode none
+ mac-address 0004.9ABC.BD25
+ type 7960
+ button 1:1
+!
+ephone 2
+ device-security-mode none
+ mac-address 00D0.BAC6.0523
+ type 7960
+ button 1:2
+!
+line con 0
+!
+line aux 0
+!
+line vty 0 4
+ login
+!
+!
+!
+end
+
